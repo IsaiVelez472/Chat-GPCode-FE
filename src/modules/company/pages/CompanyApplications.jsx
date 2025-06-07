@@ -1,34 +1,24 @@
 import React, { useState, useEffect } from "react";
-import {
-  FaCheckCircle,
-  FaTimesCircle,
-  FaHourglassHalf,
-  FaCommentDots,
-  FaTrashAlt,
-  FaTrash,
-} from "react-icons/fa";
+import { FaCheckCircle, FaTimesCircle, FaHourglassHalf, FaCheck, FaTimes } from "react-icons/fa";
 import { useAuth } from "../../auth/context/AuthContext";
 import useFetch from "../../core/hooks/useFetch";
-import ChatWindow from "../components/ChatWindow";
-import { Link } from "react-router-dom";
 import AlertDialog from "../../core/design-system/AlertDialog";
 
-const MyApplications = () => {
+const CompanyApplications = () => {
   const { user } = useAuth();
   const [applications, setApplications] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeChats, setActiveChats] = useState([]);
-  const { get, del } = useFetch();
+  const { get, put } = useFetch();
 
-  // Función para cargar las postulaciones del usuario
+  // Función para cargar las postulaciones de la empresa
   const fetchApplications = async () => {
     if (user && user.id) {
       setLoading(true);
       setError(null);
       try {
         const data = await get(
-          `http://127.0.0.1:3000/applications/user/${user.id}`
+          `http://127.0.0.1:3000/applications/company/${user.id}`
         );
         setApplications(data);
       } catch (err) {
@@ -40,24 +30,24 @@ const MyApplications = () => {
     }
   };
 
-  // Cargar las postulaciones del usuario al montar el componente
+  // Cargar las postulaciones de la empresa al montar el componente
   useEffect(() => {
     fetchApplications();
   }, [user]);
 
-  // Función para eliminar una postulación
-  const handleDeleteApplication = async (applicationId) => {
+  // Función para aceptar o rechazar una postulación
+  const handleUpdateStatus = async (applicationId, newStatus) => {
     try {
-      // Confirmar antes de eliminar
+      // Confirmar antes de cambiar el estado
+      const action = newStatus === 'approved' ? 'aceptar' : 'rechazar';
       const result = await AlertDialog.confirm({
-        title: "Eliminar postulación",
-        message:
-          "¿Estás seguro que deseas eliminar esta postulación? Esta acción no se puede deshacer.",
-        confirmButtonText: "Sí, eliminar",
+        title: `${newStatus === 'approved' ? 'Aceptar' : 'Rechazar'} postulación`,
+        message: `¿Estás seguro que deseas ${action} esta postulación? Esta acción no se puede deshacer.`,
+        confirmButtonText: `Sí, ${action}`,
         cancelButtonText: "Cancelar",
       });
 
-      // Si el usuario confirma la eliminación
+      // Si el usuario confirma la actualización
       if (result.isConfirmed) {
         // Variable para rastrear si el diálogo de carga está abierto
         let loadingDialogOpen = false;
@@ -65,14 +55,18 @@ const MyApplications = () => {
         try {
           // Mostrar diálogo de carga
           AlertDialog.loading({
-            title: "Eliminando postulación",
+            title: `${newStatus === 'approved' ? 'Aceptando' : 'Rechazando'} postulación`,
             message: "Espera un momento por favor...",
           });
 
           loadingDialogOpen = true;
 
-          // Eliminar la postulación usando la API
-          await del(`http://127.0.0.1:3000/applications/${applicationId}`);
+          // Actualizar el estado de la postulación usando la API
+          await put(`http://127.0.0.1:3000/applications/${applicationId}`, {
+            application: {
+              status: newStatus
+            }
+          });
 
           // Cerrar diálogo de carga
           if (loadingDialogOpen) {
@@ -82,8 +76,8 @@ const MyApplications = () => {
 
           // Mostrar mensaje de éxito
           await AlertDialog.success({
-            title: "Postulación eliminada",
-            message: "La postulación ha sido eliminada con éxito.",
+            title: "Postulación actualizada",
+            message: `La postulación ha sido ${newStatus === 'approved' ? 'aceptada' : 'rechazada'} con éxito.`,
           });
 
           // Recargar las postulaciones
@@ -98,8 +92,7 @@ const MyApplications = () => {
           }
 
           // Extraer mensaje de error del backend
-          let errorMessage =
-            "No se pudo eliminar la postulación. Por favor intenta nuevamente.";
+          let errorMessage = `No se pudo ${action} la postulación. Por favor intenta nuevamente.`;
 
           // Intentar extraer el mensaje de error de la estructura esperada
           if (apiError.response && apiError.response.errors) {
@@ -120,7 +113,7 @@ const MyApplications = () => {
 
           // Mostrar diálogo de error
           AlertDialog.error({
-            title: "Error al eliminar postulación",
+            title: `Error al ${action} postulación`,
             message: errorMessage,
           });
         } finally {
@@ -131,11 +124,10 @@ const MyApplications = () => {
         }
       }
     } catch (error) {
-      console.error("Error al eliminar postulación:", error);
+      console.error(`Error al ${newStatus === 'approved' ? 'aceptar' : 'rechazar'} postulación:`, error);
       AlertDialog.error({
         title: "Error",
-        message:
-          "No se pudo eliminar la postulación. Intenta de nuevo más tarde.",
+        message: `No se pudo procesar la postulación. Intenta de nuevo más tarde.`,
       });
     }
   };
@@ -173,63 +165,15 @@ const MyApplications = () => {
 
   // Función para manejar errores y reintentar la carga
   const handleRetry = async () => {
-    if (user && user.id) {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await get(
-          `http://127.0.0.1:3000/applications/user/${user.id}`
-        );
-        setApplications(data);
-      } catch (err) {
-        setError(err.message || "Error al cargar las postulaciones");
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  // Función para abrir un nuevo chat
-  const handleOpenChat = (application) => {
-    // Verificar si el chat ya está abierto
-    const chatExists = activeChats.find(
-      (chat) => chat.vacancyId === application.vacancy_id
-    );
-
-    if (!chatExists) {
-      console.log("Application data:", application); // Para debug
-
-      // Obtenemos el nombre de la empresa o usamos un valor por defecto
-      let companyName = "Empresa";
-      if (application.vacancy && application.vacancy.empresa) {
-        companyName = application.vacancy.empresa.nombre || "Empresa";
-      }
-
-      setActiveChats((prev) => [
-        ...prev,
-        {
-          vacancyId: application.vacancy_id,
-          companyName: companyName,
-          vacancyTitle: application.vacancy?.title || "Vacante",
-        },
-      ]);
-    }
-  };
-
-  // Función para cerrar un chat
-  const handleCloseChat = (vacancyId) => {
-    setActiveChats((prev) =>
-      prev.filter((chat) => chat.vacancyId !== vacancyId)
-    );
+    fetchApplications();
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-screen-2xl">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Mis Postulaciones</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Postulaciones Recibidas</h1>
         <p className="mt-2 text-gray-600">
-          Aquí puedes ver el estado de todas tus postulaciones a oportunidades
-          de voluntariado.
+          Aquí puedes ver todas las postulaciones de usuarios a tus vacantes.
         </p>
       </div>
 
@@ -253,63 +197,51 @@ const MyApplications = () => {
       ) : !applications || applications.length === 0 ? (
         <div className="bg-white shadow rounded-lg p-8 text-center">
           <h3 className="text-xl font-medium text-gray-900 mb-2">
-            No tienes postulaciones
+            No hay postulaciones
           </h3>
           <p className="text-gray-600 mb-6">
-            Aún no te has postulado a ninguna oportunidad de voluntariado.
+            Aún no has recibido postulaciones para tus vacantes publicadas.
           </p>
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary-500 hover:bg-primary-600"
-          >
-            Explorar oportunidades
-          </Link>
         </div>
       ) : (
         <div className="bg-white shadow overflow-hidden rounded-lg">
-          <div className="overflow-x-auto w-full">
-            <table className="w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Candidato
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Documento
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
                     Vacante
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6"
-                  >
-                    Empresa
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6"
-                  >
-                    Descripción
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-1/9"
-                  >
-                    Fecha de Expiración
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-1/9"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
                     Fecha de Postulación
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/10"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
                     Estado
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/7"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
                     Acciones
                   </th>
@@ -320,25 +252,23 @@ const MyApplications = () => {
                   <tr key={application.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {application.vacancy?.title || "Vacante no disponible"}
+                        {application.user.first_name} {application.user.last_name}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {application.user.email}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-700">
-                        {application.vacancy?.company?.nombre ||
-                          "Empresa no disponible"}
+                      <div className="text-sm text-gray-900">
+                        {application.user.document_type} {application.user.document_number}
                       </div>
                     </td>
                     <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {application.vacancy?.title || "Vacante no disponible"}
+                      </div>
                       <div className="text-sm text-gray-500 line-clamp-2">
                         {application.vacancy?.description || "Sin descripción"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
-                        {application.vacancy?.expiration_date
-                          ? formatDate(application.vacancy.expiration_date)
-                          : "No definida"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -352,24 +282,28 @@ const MyApplications = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleOpenChat(application)}
-                          className="text-primary-500 hover:text-primary-700 flex items-center bg-primary-50 hover:bg-primary-100 transition-colors px-2 py-1 rounded-md border border-primary-100"
-                          title="Chatear"
-                        >
-                          <FaCommentDots className="mr-1" /> Chatear
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleDeleteApplication(application.id);
-                          }}
-                          className="flex items-center justify-center p-2 rounded-full bg-primary-50 hover:bg-primary-100 transition-colors cursor-pointer"
-                          title="Eliminar postulación"
-                        >
-                          <FaTrash className="h-4 w-4 text-red-500" />
-                        </button>
+                      <div className="flex space-x-2">
+                        {application.status === "pending" && (
+                          <>
+                            <button
+                              onClick={() => handleUpdateStatus(application.id, "approved")}
+                              className="flex items-center px-3 py-1.5 bg-green-50 text-green-700 rounded-md border border-green-200 hover:bg-green-100 transition-colors"
+                              title="Aceptar postulación"
+                            >
+                              <FaCheck className="mr-1.5" /> Aceptar
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(application.id, "rejected")}
+                              className="flex items-center px-3 py-1.5 bg-red-50 text-red-700 rounded-md border border-red-200 hover:bg-red-100 transition-colors"
+                              title="Rechazar postulación"
+                            >
+                              <FaTimes className="mr-1.5" /> Rechazar
+                            </button>
+                          </>
+                        )}
+                        {application.status !== "pending" && (
+                          <span className="text-gray-400 italic">Procesada</span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -379,20 +313,8 @@ const MyApplications = () => {
           </div>
         </div>
       )}
-      {/* Contenedor de chats */}
-      <div className="fixed bottom-0 right-0 flex flex-row-reverse items-end space-x-6 space-x-reverse p-5 z-50">
-        {activeChats.map((chat) => (
-          <ChatWindow
-            key={chat.vacancyId}
-            vacancyId={chat.vacancyId}
-            companyName={chat.companyName}
-            vacancyTitle={chat.vacancyTitle}
-            onClose={handleCloseChat}
-          />
-        ))}
-      </div>
     </div>
   );
 };
 
-export default MyApplications;
+export default CompanyApplications;

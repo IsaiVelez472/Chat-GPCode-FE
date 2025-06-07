@@ -82,6 +82,16 @@ const Header = () => {
                     >
                       Mis Proyectos
                     </Link>
+                    <Link
+                      to="/company/applications"
+                      className={`text-gray-700 hover:text-primary-500 transition-colors ${
+                        isActive("/company/applications")
+                          ? "font-semibold text-primary-500"
+                          : ""
+                      }`}
+                    >
+                      Postulaciones
+                    </Link>
                   </>
                 ) : (
                   <>
@@ -225,6 +235,17 @@ const Header = () => {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Mis Proyectos
+                    </Link>
+                    <Link
+                      to="/company/applications"
+                      className={`block px-3 py-2 text-gray-700 hover:text-primary-500 transition-colors ${
+                        isActive("/company/applications")
+                          ? "font-semibold text-primary-500"
+                          : ""
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Postulaciones
                     </Link>
                   </>
                 ) : (

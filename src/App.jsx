@@ -8,6 +8,7 @@ import Dashboard from "./modules/volunteer/pages/Dashboard";
 import MyApplications from "./modules/volunteer/pages/MyApplications";
 import CompanyVacancies from "./modules/company/pages/CompanyVacancies";
 import CompanyProjects from "./modules/company/pages/CompanyProjects";
+import CompanyApplications from "./modules/company/pages/CompanyApplications";
 import CreateProjectForm from "./modules/company/pages/CreateProjectForm";
 import CreateVacancieForm from "./modules/company/pages/CreateVacancieForm";
 import AuthRedirect from "./modules/core/components/AuthRedirect";
@@ -66,6 +67,14 @@ function App() {
                 element={
                   <CompanyRoute>
                     <CompanyProjects />
+                  </CompanyRoute>
+                } 
+              />
+              <Route 
+                path="/company/applications" 
+                element={
+                  <CompanyRoute>
+                    <CompanyApplications />
                   </CompanyRoute>
                 } 
               />
