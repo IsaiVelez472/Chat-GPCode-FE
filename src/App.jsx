@@ -6,6 +6,7 @@ import VolunteerLandingPage from "./modules/homepage";
 import AuthPage from "./modules/auth/pages/AuthPage";
 import Dashboard from "./modules/volunteer/pages/Dashboard";
 import MyApplications from "./modules/volunteer/pages/MyApplications";
+import Forum from "./modules/volunteer/pages/Forum";
 import CompanyVacancies from "./modules/company/pages/CompanyVacancies";
 import CompanyProjects from "./modules/company/pages/CompanyProjects";
 import CompanyApplications from "./modules/company/pages/CompanyApplications";
@@ -49,6 +50,14 @@ function App() {
                 element={
                   <VolunteerRoute>
                     <MyApplications />
+                  </VolunteerRoute>
+                } 
+              />
+              <Route 
+                path="/forum" 
+                element={
+                  <VolunteerRoute>
+                    <Forum />
                   </VolunteerRoute>
                 } 
               />

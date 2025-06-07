@@ -115,6 +115,16 @@ const Header = () => {
                     >
                       Mis Postulaciones
                     </Link>
+                    <Link
+                      to="/forum"
+                      className={`text-gray-700 hover:text-primary-500 transition-colors ${
+                        isActive("/forum")
+                          ? "font-semibold text-primary-500"
+                          : ""
+                      }`}
+                    >
+                      Foro
+                    </Link>
                   </>
                 )}
               </div>
@@ -271,6 +281,17 @@ const Header = () => {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Mis Postulaciones
+                    </Link>
+                    <Link
+                      to="/forum"
+                      className={`block px-3 py-2 text-gray-700 hover:text-primary-500 transition-colors ${
+                        isActive("/forum")
+                          ? "font-semibold text-primary-500"
+                          : ""
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Foro
                     </Link>
                   </>
                 )}
